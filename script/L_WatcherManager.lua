@@ -6,19 +6,6 @@ module("WatcherManager", package.seeall)
 require("L_Tools")
 local json = require("json") -- See http://json.luaforge.net/
 
---[[
-TODO
-- gestion des trigger 'timer'
-- si démarrage alors vérifier action si non faite
-- condition horaire
-
-Add variables in message : time, duration, value, date, seconds, name
-"#time#" "#date#" "#name#" #seconds# "#duration#" "#durationfull#"
-
-cas des devices non connu : plantage
-
---]]
-
 local WatcherManager = {
 	_VERSION = "0.0.1"
 }
