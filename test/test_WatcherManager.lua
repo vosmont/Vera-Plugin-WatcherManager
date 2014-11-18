@@ -1,6 +1,9 @@
+-- Unit tests
+-- See https://github.com/vosmont/Vera-Plugin-Mock
+
 package.path = "./script/?.lua;./lib/?.lua;../?.lua;" .. package.path
 
-local _verbosity = 3
+local _verbosity = 4
 
 local LuaUnit = require("luaunit")
 local VeraMock = require("core.vera")
@@ -67,11 +70,11 @@ WatcherManager.addAction(
 local ruleGarageDoors = {
 	name = "Rule_Garage_Doors",
 	triggers = {
-		{type="value", device="Garage_SectionalDoor", service=SID_SecuritySensor, variable="Tripped", value="1"},
-		{type="value", device="Garage_ServiceDoor", service=SID_SecuritySensor, variable="Tripped", value="1"}
+		{type="value", device="Garage_SectionalDoor", service=SID.SecuritySensor, variable="Tripped", value="1"},
+		{type="value", device="Garage_ServiceDoor", service=SID.SecuritySensor, variable="Tripped", value="1"}
 	},
 	conditions = {
-		{type="value", device="Garage_SectionalDoor", service=SID_SecuritySensor, variable="Armed", value="1"}
+		{type="value", device="Garage_SectionalDoor", service=SID.SecuritySensor, variable="Armed", value="1"}
 	},
 	actions = {
 		{
@@ -82,15 +85,12 @@ local ruleGarageDoors = {
 		}, {
 			event = "start",
 			type = "action",
-			devices={"Garage_Light"}, service=SID_SwitchPower, action="SetTarget", arguments={NewTarget="1"}
+			devices={"Garage_Light"}, service=SID.SwitchPower, action="SetTarget", arguments={NewTarget="1"}
 		}, {
 			event = "start",
 			timeDelay = 2,
 			callback = function ()
 				-- Custom function called on rule activation
-				expect(getExpect() + 2)
-				assertTrue(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is active (Start function)")
-				assertEquals(luup.variable_get(SID_SwitchPower, "Status", DeviceHelper.getIdByName("Garage_Light")), "1", "The garage light is ON (Start function)")
 				traceCall("Rule_Garage_Doors", "start")
 			end
 		}, {
@@ -103,8 +103,6 @@ local ruleGarageDoors = {
 			timeDelay = 5,
 			callback = function ()
 				-- Custom function called after rule activation if still active
-				expect(getExpect() + 1)
-				assertTrue(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is active (Reminder function)")
 				traceCall("Rule_Garage_Doors", "reminder")
 			end
 		}, {
@@ -114,15 +112,12 @@ local ruleGarageDoors = {
 		}, {
 			event = "end",
 			type = "action",
-			devices={"Garage_Light"}, service=SID_SwitchPower, action="SetTarget", arguments={NewTarget="0"}
+			devices={"Garage_Light"}, service=SID.SwitchPower, action="SetTarget", arguments={NewTarget="0"}
 		}, {
 			event = "end",
 			timeDelay = 1,
 			callback = function ()
 				-- Custom function called on rule deactivation
-				expect(getExpect() + 2)
-				assertFalse(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is inactive (End function)")
-				assertEquals(luup.variable_get(SID_SwitchPower, "Status", DeviceHelper.getIdByName("Garage_Light")), "0", "The garage light is OFF (End function)")
 				traceCall("Rule_Garage_Doors", "end")
 			end
 		}
@@ -131,21 +126,21 @@ local ruleGarageDoors = {
 local ruleGarageTemperature = {
 	name = "Rule_Garage_Temperature",
 	triggers = {
-		{type="value-", device="Garage_Temperature", service=SID_TemperatureSensor, variable="CurrentTemperature", value="10"},
-		{type="value+", device="Garage_Temperature", service=SID_TemperatureSensor, variable="CurrentTemperature", value="20"}
+		{type="value-", device="Garage_Temperature", service=SID.TemperatureSensor, variable="CurrentTemperature", value="10"},
+		{type="value+", device="Garage_Temperature", service=SID.TemperatureSensor, variable="CurrentTemperature", value="20"}
 	},
 	actions = {
 		{
 			event = "start",
 			conditions = {
-				{type="value-", device="Garage_Temperature", service=SID_TemperatureSensor, variable="CurrentTemperature", value="10"}
+				{type="value-", device="Garage_Temperature", service=SID.TemperatureSensor, variable="CurrentTemperature", value="10"}
 			},
 			type = "vocal",
 			message = "Attention, température du garage trop basse. La température est de #value# degrés"
 		}, {
 			event = "start",
 			conditions = {
-				{type="value+", device="Garage_Temperature", service=SID_TemperatureSensor, variable="CurrentTemperature", value="20"}
+				{type="value+", device="Garage_Temperature", service=SID.TemperatureSensor, variable="CurrentTemperature", value="20"}
 			},
 			type = "vocal",
 			message = "Attention, température du garage trop haute. La température est de #value# degrés"
@@ -223,15 +218,15 @@ TestWatcherManager = {}
 		assertFalse(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is not active")
 
 		log("*** Garage door is opening but not armed")
-		luup.variable_set(SID_SecuritySensor, "Armed", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
-		luup.variable_set(SID_SecuritySensor, "Tripped", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+		luup.variable_set(SID.SecuritySensor, "Armed", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+		luup.variable_set(SID.SecuritySensor, "Tripped", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
 
 		luup.call_delay(
 			wrapAnonymousCallback(function ()
 				log("*** After waiting 3 secondes")
 				assertFalse(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is not active")
 				log("*** Garage door is closing (before reminder actions)")
-				luup.variable_set(SID_SecuritySensor, "Tripped", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+				luup.variable_set(SID.SecuritySensor, "Tripped", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
 			end),
 			3, ""
 		)
@@ -245,8 +240,8 @@ TestWatcherManager = {}
 		expect(3)
 
 		log("*** Garage door is opening and is armed")
-		luup.variable_set(SID_SecuritySensor, "Armed", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
-		luup.variable_set(SID_SecuritySensor, "Tripped", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+		luup.variable_set(SID.SecuritySensor, "Armed", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+		luup.variable_set(SID.SecuritySensor, "Tripped", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
 
 		log("*** Start")
 		WatcherManager.start()
@@ -257,7 +252,7 @@ TestWatcherManager = {}
 				log("*** After waiting 3 secondes")
 				assertTrue(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is active")
 				log("*** Garage door is closing (before reminder actions)")
-				luup.variable_set(SID_SecuritySensor, "Tripped", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+				luup.variable_set(SID.SecuritySensor, "Tripped", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
 			end),
 			3, ""
 		)
@@ -275,15 +270,15 @@ TestWatcherManager = {}
 		assertFalse(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is not active")
 
 		log("*** Garage door is opening and is armed")
-		luup.variable_set(SID_SecuritySensor, "Armed", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
-		luup.variable_set(SID_SecuritySensor, "Tripped", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+		luup.variable_set(SID.SecuritySensor, "Armed", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+		luup.variable_set(SID.SecuritySensor, "Tripped", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
 
 		luup.call_delay(
 			wrapAnonymousCallback(function ()
 				log("*** After waiting 3 secondes")
 				assertTrue(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is active")
 				log("*** Garage door is closing (before reminder actions)")
-				luup.variable_set(SID_SecuritySensor, "Tripped", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+				luup.variable_set(SID.SecuritySensor, "Tripped", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
 			end),
 			3, ""
 		)
@@ -297,8 +292,8 @@ TestWatcherManager = {}
 		expect(6)
 
 		log("*** Garage door is opening and is armed")
-		luup.variable_set(SID_SecuritySensor, "Armed", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
-		luup.variable_set(SID_SecuritySensor, "Tripped", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+		luup.variable_set(SID.SecuritySensor, "Armed", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+		luup.variable_set(SID.SecuritySensor, "Tripped", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
 
 		log("*** Start")
 		WatcherManager.start()
@@ -309,7 +304,7 @@ TestWatcherManager = {}
 				log("*** After waiting 11 secondes")
 				assertTrue(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is active")
 				log("*** Garage door is closing (after reminder actions)")
-				luup.variable_set(SID_SecuritySensor, "Tripped", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+				luup.variable_set(SID.SecuritySensor, "Tripped", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
 			end),
 			11, ""
 		)
@@ -331,8 +326,8 @@ TestWatcherManager = {}
 		assertFalse(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is not active")
 
 		log("*** Garage door is opening and is armed")
-		luup.variable_set(SID_SecuritySensor, "Armed", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
-		luup.variable_set(SID_SecuritySensor, "Tripped", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+		luup.variable_set(SID.SecuritySensor, "Armed", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+		luup.variable_set(SID.SecuritySensor, "Tripped", "1", DeviceHelper.getIdByName("Garage_SectionalDoor"))
 		assertTrue(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is active")
 
 		luup.call_delay(
@@ -340,7 +335,7 @@ TestWatcherManager = {}
 				log("*** After waiting 11 secondes")
 				assertTrue(WatcherManager.isRuleActive("Rule_Garage_Doors"), "Rule 'Rule_Garage_Doors' is active")
 				log("*** Garage door is closing (after reminder actions)")
-				luup.variable_set(SID_SecuritySensor, "Tripped", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
+				luup.variable_set(SID.SecuritySensor, "Tripped", "0", DeviceHelper.getIdByName("Garage_SectionalDoor"))
 			end),
 			11, ""
 		)
@@ -352,42 +347,427 @@ TestWatcherManager = {}
 		assertEquals(_calls["Rule_Garage_Doors"]["end"], 1, "The end function for 'Rule_Garage_Doors' has been called")
 	end
 
-	function TestWatcherManager:test_trigger_value()
+	function TestWatcherManager:test_rule_with_levels()
+		VeraMock:addDevice({description="Device1"})
+		VeraMock:addDevice({description="Device2"})
+		WatcherManager.addRule({
+			name = "Rule_Level",
+			triggers = {
+				{type="value", device="Device1", service=SID.SwitchPower, variable="Status", value="1", level=1},
+				{type="value", device="Device2", service=SID.SwitchPower, variable="Status", value="1", level="2"}
+			},
+			actions = {
+				{
+					event = "start",
+					callback = function ()
+						traceCall("Rule_Level", "start")
+					end
+				}, {
+					event = "start",
+					level = "1",
+					callback = function ()
+						traceCall("Rule_Level", "start_level_1")
+					end
+				}, {
+					event = "start",
+					level = 2,
+					callback = function ()
+						traceCall("Rule_Level", "start_level_2")
+					end
+				}, {
+					event = "reminder",
+					timeDelay = 2,
+					callback = function ()
+						traceCall("Rule_Level", "reminder")
+					end
+				}, {
+					event = "reminder",
+					timeDelay = 2,
+					level = 1,
+					callback = function ()
+						traceCall("Rule_Level", "reminder_level_1")
+					end
+				}, {
+					event = "reminder",
+					timeDelay = 2,
+					level = 2,
+					callback = function ()
+						traceCall("Rule_Level", "reminder_level_2")
+					end
+				}, {
+					event = "end",
+					callback = function ()
+						traceCall("Rule_Level", "end")
+					end
+				}, {
+					event = "end",
+					level = "1",
+					callback = function ()
+						traceCall("Rule_Level", "end_level_1")
+					end
+				}, {
+					event = "end",
+					level = 2,
+					callback = function ()
+						traceCall("Rule_Level", "end_level_2")
+					end
+				}
+			}
+		})
+		
+		expect(4)
+
+		log("*** Start")
+		WatcherManager.start()
+
+		log("*** Rule level 1 active and Rule level 2 inactive")
+		luup.variable_set(SID.SwitchPower, "Status", "1", DeviceHelper.getIdByName("Device1"))
+		luup.variable_set(SID.SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device2"))
+		assertEquals(_calls["Rule_Level"], {
+			start = 1,
+			start_level_1 = 1
+		}, "The number of event call is correct")
+
+		luup.call_delay(
+			wrapAnonymousCallback(function ()
+				log("*** After waiting 5 secondes")
+				log("*** Rule level 1 still active and Rule level 2 active")
+				luup.variable_set(SID.SwitchPower, "Status", "1", DeviceHelper.getIdByName("Device2"))
+				assertEquals(_calls["Rule_Level"], {
+					start = 1,
+					start_level_1 = 1,
+					start_level_2 = 1,
+					reminder = 2,
+					reminder_level_1 = 2,
+					end_level_1 = 1
+				}, "The number of event call is correct")
+			end),
+			5, ""
+		)
+
+		luup.call_delay(
+			wrapAnonymousCallback(function ()
+				log("*** After waiting 7 secondes")
+				log("*** Rule level 1 still active and Rule level 2 inactive")
+				luup.variable_set(SID.SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device2"))
+				assertEquals(_calls["Rule_Level"], {
+					start = 1,
+					start_level_1 = 2,
+					start_level_2 = 1,
+					reminder = 3,
+					reminder_level_1 = 2,
+					reminder_level_2 = 1,
+					end_level_1 = 1,
+					end_level_2 = 1
+				}, "The number of event call is correct")
+			end),
+			7, ""
+		)
+
+		luup.call_delay(
+			wrapAnonymousCallback(function ()
+				log("*** After waiting 9 secondes")
+				log("*** Rule level 1 inactive and Rule level 2 still inactive")
+				luup.variable_set(SID.SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device1"))
+				assertEquals(_calls["Rule_Level"], {
+					start = 1,
+					start_level_1 = 2,
+					start_level_2 = 1,
+					reminder = 4,
+					reminder_level_1 = 3,
+					reminder_level_2 = 1,
+					["end"] = 1,
+					end_level_1 = 2,
+					end_level_2 = 1
+				}, "The number of event call is correct")
+			end),
+			9, ""
+		)
+
+		VeraMock:run()
+	end
+
+	function TestWatcherManager:test_rule_disable()
+		VeraMock:addDevice({description="Device1"})
+		WatcherManager.addRule({
+			name = "Rule_Disabled",
+			triggers = {
+				{type="value", device="Device1", service=SID.SwitchPower, variable="Status", value="1"},
+			},
+			actions = {
+				{
+					event = "start",
+					callback = function ()
+						traceCall("Rule_Disabled", "eventStart")
+					end
+				}, {
+					event = "reminder",
+					timeDelay = 2,
+					callback = function ()
+						traceCall("Rule_Disabled", "eventReminder")
+					end
+				}, {
+					event = "end",
+					callback = function ()
+						traceCall("Rule_Disabled", "eventEnd")
+					end
+				}
+			}
+		})
+
+		expect(16)
+
+		log("*** Start")
+		WatcherManager.start()
+		assertFalse(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is not active")
+
+		log("*** Rule is disabled and could be active")
+		WatcherManager.disableRule("Rule_Disabled")
+		WatcherManager.disableRule("Rule_Disabled")
+		assertFalse(WatcherManager.isRuleEnabled("Rule_Disabled"), "Rule is not enabled")
+		luup.variable_set(SID.SwitchPower, "Status", "1", DeviceHelper.getIdByName("Device1"))
+		assertFalse(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is not active")
+		assertNil(_calls["Rule_Disabled"], "The number of event call is correct")
+
+		luup.call_delay(
+			wrapAnonymousCallback(function ()
+				log("*** After waiting 1 seconde")
+				log("*** Rule is enabled and could be active")
+				WatcherManager.enableRule("Rule_Disabled")
+				WatcherManager.enableRule("Rule_Disabled")
+				assertTrue(WatcherManager.isRuleEnabled("Rule_Disabled"), "Rule is enabled")
+				assertTrue(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is now active")
+				assertEquals(_calls["Rule_Disabled"], {
+					eventStart = 1
+				}, "The number of event call is correct")
+			end),
+			1, ""
+		)
+
+		luup.call_delay(
+			wrapAnonymousCallback(function ()
+				log("*** After waiting 4 secondes")
+				log("*** Rule is disabled and could be active")
+				WatcherManager.disableRule("Rule_Disabled")
+				WatcherManager.disableRule("Rule_Disabled")
+				assertFalse(WatcherManager.isRuleEnabled("Rule_Disabled"), "Rule is not enabled")
+				assertTrue(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is still active")
+				assertEquals(_calls["Rule_Disabled"], {
+					eventStart = 1,
+					eventReminder = 1
+				}, "The number of event call is correct")
+			end),
+			4, ""
+		)
+
+		luup.call_delay(
+			wrapAnonymousCallback(function ()
+				log("*** After waiting 6 secondes")
+				log("*** Rule is disabled and could be inactive")
+				WatcherManager.disableRule("Rule_Disabled")
+				assertFalse(WatcherManager.isRuleEnabled("Rule_Disabled"), "Rule is not enabled")
+				luup.variable_set(SID.SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device1"))
+				assertTrue(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is still active")
+				assertEquals(_calls["Rule_Disabled"], {
+					eventStart = 1,
+					eventReminder = 1
+				}, "The number of event call is correct")
+			end),
+			6, ""
+		)
+
+		luup.call_delay(
+			wrapAnonymousCallback(function ()
+				log("*** After waiting 8 secondes")
+				log("*** Rule is enabled and could be inactive")
+				WatcherManager.enableRule("Rule_Disabled")
+				WatcherManager.enableRule("Rule_Disabled")
+				assertTrue(WatcherManager.isRuleEnabled("Rule_Disabled"), "Rule is enabled")
+				assertFalse(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is now not active")
+				assertEquals(_calls["Rule_Disabled"], {
+					eventStart = 1,
+					eventReminder = 1,
+					eventEnd = 1
+				}, "The number of event call is correct")
+			end),
+			8, ""
+		)
+
+		VeraMock:run()
+	end
+
+	function TestWatcherManager:test_rule_duration()
 		WatcherManager.addRule(ruleGarageTemperature)
 
-		expect(8)
+		expect(13)
+		local rule = WatcherManager.getRule("Rule_Garage_Temperature")
+		local expectedLastStatusUpdate = os.time()
+		local expectedLastUpdate
 
 		log("*** Start")
 		WatcherManager.start()
 		assertFalse(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is not active")
 
-		log("*** Garage temperature is between min and max thresholds")
-		luup.variable_set(SID_TemperatureSensor, "CurrentTemperature", "10.9", DeviceHelper.getIdByName("Garage_Temperature"))
-		assertFalse(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is not active")
-
-		log("*** Garage temperature is on min threshold")
-		luup.variable_set(SID_TemperatureSensor, "CurrentTemperature", "10", DeviceHelper.getIdByName("Garage_Temperature"))
-		assertTrue(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is active")
-
 		log("*** Garage temperature is below min threshold")
-		luup.variable_set(SID_TemperatureSensor, "CurrentTemperature", "9.9", DeviceHelper.getIdByName("Garage_Temperature"))
+		expectedLastUpdate = os.time()
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "9", DeviceHelper.getIdByName("Garage_Temperature"))
 		assertTrue(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is active")
+		assertEquals(rule._lastStatusTime, expectedLastStatusUpdate, "Rule 'Rule_Garage_Temperature' last rule status update time is correct")
+		assertEquals(rule._context.lastUpdate, expectedLastUpdate, "Rule 'Rule_Garage_Temperature' last trigger update time is correct")
+		assertEquals(rule._context.value, "9", "Rule 'Rule_Garage_Temperature' context value has changed")
 
-		log("*** Garage temperature is between min and max thresholds")
-		luup.variable_set(SID_TemperatureSensor, "CurrentTemperature", "19.9", DeviceHelper.getIdByName("Garage_Temperature"))
-		assertFalse(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is not active")
+		luup.call_delay(
+			wrapAnonymousCallback(function ()
+				log("*** After waiting 1 seconde")
+				log("*** Garage temperature is still below min threshold")
+				expectedLastUpdate = os.time()
+				luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", 5, DeviceHelper.getIdByName("Garage_Temperature"))
+				assertTrue(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is active")
+			end),
+			1, ""
+		)
 
-		log("*** Garage temperature is on max threshold")
-		luup.variable_set(SID_TemperatureSensor, "CurrentTemperature", "20", DeviceHelper.getIdByName("Garage_Temperature"))
-		assertTrue(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is active")
+		luup.call_delay(
+			wrapAnonymousCallback(function ()
+				log("*** After waiting 2 secondes")
+				log("*** Garage temperature is still below min threshold")
+				assertEquals(rule._lastStatusTime, expectedLastStatusUpdate, "Rule 'Rule_Garage_Temperature' last rule status update time is correct")
+				assertEquals(rule._context.lastUpdate, expectedLastUpdate, "Rule 'Rule_Garage_Temperature' last trigger update time has changed")
+				assertEquals(rule._context.value, '5', "Rule 'Rule_Garage_Temperature' context value has changed")
+			end),
+			2, ""
+		)
 
-		log("*** Garage temperature is above max threshold")
-		luup.variable_set(SID_TemperatureSensor, "CurrentTemperature", "20.1", DeviceHelper.getIdByName("Garage_Temperature"))
-		assertTrue(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is active")
+		luup.call_delay(
+			wrapAnonymousCallback(function ()
+				log("*** After waiting 3 secondes")
+				log("*** Garage temperature is over min threshold")
+				expectedLastStatusUpdate = os.time()
+				expectedLastUpdate = os.time()
+				luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "15", DeviceHelper.getIdByName("Garage_Temperature"))
+				assertFalse(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is not active")
+			end),
+			3, ""
+		)
 
-		log("*** Garage temperature is between min and max thresholds")
-		luup.variable_set(SID_TemperatureSensor, "CurrentTemperature", "15", DeviceHelper.getIdByName("Garage_Temperature"))
-		assertFalse(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is not active")
+		VeraMock:run()
+		assertEquals(rule._lastStatusTime, expectedLastStatusUpdate, "Rule 'Rule_Garage_Temperature' last rule status update time is correct")
+		assertEquals(rule._context.lastUpdate, expectedLastUpdate, "Rule 'Rule_Garage_Temperature' last trigger update time has changed")
+		assertEquals(rule._context.value, '15', "Rule 'Rule_Garage_Temperature' context value has changed")
+	end
+
+	function TestWatcherManager:test_enhanced_message()
+		local message
+		local context = {}
+
+		log("*** #value#")
+
+		context.value = 15
+		message = WatcherManager.getEnhancedMessage ("valeur #value#", context)
+		assertEquals(message, "valeur 15", "Value Integer")
+
+		context.value = "32"
+		message = WatcherManager.getEnhancedMessage ("valeur #value#", context)
+		assertEquals(message, "valeur 32", "Value String")
+
+		log("*** #duration# and #durationfull#")
+
+		context.lastStatusUpdate = os.time() - 1
+		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
+		assertEquals(message, "durée - P1S - une seconde", "Duration 1 second")
+
+		context.lastStatusUpdate = os.time() - 2
+		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
+		assertEquals(message, "durée - P2S - 2 secondes", "Duration of 2 seconds")
+
+		context.lastStatusUpdate = os.time() - 60
+		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
+		assertEquals(message, "durée - P1M0S - une minute", "Duration of 1 minute")
+
+		context.lastStatusUpdate = os.time() - 132
+		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
+		assertEquals(message, "durée - P2M12S - 2 minutes et 12 secondes", "Duration of 2 minutes and 12 seconds")
+
+		context.lastStatusUpdate = os.time() - 3600
+		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
+		assertEquals(message, "durée - P1H0M0S - une heure", "Duration of 1 hour")
+
+		context.lastStatusUpdate = os.time() - 8415
+		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
+		assertEquals(message, "durée - P2H20M15S - 2 heures et 20 minutes", "Duration of 2 hours et 20 minutes with seconds")
+
+		context.lastStatusUpdate = os.time() - 91225
+		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
+		assertEquals(message, "durée - P1DT1H20M25S - 1 jour et une heure", "Duration of 1 day and 1 hour with minutes and seconds")
+
+		context.lastStatusUpdate = os.time() - 188432
+		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
+		assertEquals(message, "durée - P2DT4H20M32S - 2 jours et 4 heures", "Duration of 2 days and 4 hours with minutes and seconds")
+
+	end
+
+	function TestWatcherManager:test_trigger_value()
+		VeraMock:addDevice({description="Device1"})
+		VeraMock:addDevice({description="Device2"})
+		VeraMock:addDevice({description="Device3"})
+		VeraMock:addDevice({description="Device4"})
+		WatcherManager.addRule({
+			name = "Rule_Value",
+			triggers = {
+				{type="value", device="Device1", service=SID.TemperatureSensor, variable="CurrentTemperature", value="10"},
+				{type="value-", device="Device2", service=SID.TemperatureSensor, variable="CurrentTemperature", value="10"},
+				{type="value+", device="Device2", service=SID.TemperatureSensor, variable="CurrentTemperature", value="20.1"},
+				{type="value<>", devices={"Device3", "Device4"}, service=SID.TemperatureSensor, variable="CurrentTemperature", value="20"}
+			}
+		})
+
+		expect(18)
+
+		log("*** Start")
+		WatcherManager.start()
+		assertFalse(WatcherManager.isRuleActive("Rule_Value"), "Rule is not active")
+
+		log("*** Value")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", 9.2, DeviceHelper.getIdByName("Device1"))
+		assertFalse(WatcherManager.isRuleActive("Rule_Value"), "Not equal - Rule is not active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", 10.0, DeviceHelper.getIdByName("Device1"))
+		assertTrue(WatcherManager.isRuleActive("Rule_Value"), "Equal - Rule is active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "11", DeviceHelper.getIdByName("Device1"))
+		assertFalse(WatcherManager.isRuleActive("Rule_Value"), "Not equal - Rule is not active")
+
+		log("*** Value-")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", 9.9, DeviceHelper.getIdByName("Device2"))
+		assertTrue(WatcherManager.isRuleActive("Rule_Value"), "Below - Rule is active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", 10.0, DeviceHelper.getIdByName("Device2"))
+		assertTrue(WatcherManager.isRuleActive("Rule_Value"), "Equal - Rule is active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "10.1", DeviceHelper.getIdByName("Device2"))
+		assertFalse(WatcherManager.isRuleActive("Rule_Value"), "Above - Rule is not active")
+
+		log("*** Value+")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "20.11", DeviceHelper.getIdByName("Device2"))
+		assertTrue(WatcherManager.isRuleActive("Rule_Value"), "Above - Rule is active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", 20.1, DeviceHelper.getIdByName("Device2"))
+		assertTrue(WatcherManager.isRuleActive("Rule_Value"), "Equal - Rule is active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "20.09", DeviceHelper.getIdByName("Device2"))
+		assertFalse(WatcherManager.isRuleActive("Rule_Value"), "Below - Rule is not active")
+
+		log("*** Value<>")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "20.01", DeviceHelper.getIdByName("Device3"))
+		assertTrue(WatcherManager.isRuleActive("Rule_Value"), "Not equal - Rule is active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", 20.0, DeviceHelper.getIdByName("Device3"))
+		assertFalse(WatcherManager.isRuleActive("Rule_Value"), "Equal - Rule is not active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "19.99", DeviceHelper.getIdByName("Device3"))
+		assertTrue(WatcherManager.isRuleActive("Rule_Value"), "Not equal - Rule is active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "20.00", DeviceHelper.getIdByName("Device3"))
+		assertFalse(WatcherManager.isRuleActive("Rule_Value"), "Equal - Rule is not active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "20.01", DeviceHelper.getIdByName("Device4"))
+		assertTrue(WatcherManager.isRuleActive("Rule_Value"), "Not equal - Rule is active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", 20.0, DeviceHelper.getIdByName("Device4"))
+		assertFalse(WatcherManager.isRuleActive("Rule_Value"), "Equal - Rule is not active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "19.99", DeviceHelper.getIdByName("Device4"))
+		assertTrue(WatcherManager.isRuleActive("Rule_Value"), "Not equal - Rule is active")
+		luup.variable_set(SID.TemperatureSensor, "CurrentTemperature", "20.00", DeviceHelper.getIdByName("Device4"))
+		assertFalse(WatcherManager.isRuleActive("Rule_Value"), "Equal - Rule is not active")
 
 		VeraMock:run()
 	end
@@ -486,367 +866,7 @@ TestWatcherManager = {}
 		assertFalse(WatcherManager.isRuleActive("Rule_Linked"), "Rule is not active")
 	end
 
-	function TestWatcherManager:test_rule_with_levels()
-		VeraMock:addDevice({description="Device1"})
-		VeraMock:addDevice({description="Device2"})
-		WatcherManager.addRule({
-			name = "Rule_Level",
-			triggers = {
-				{type="value", device="Device1", service=SID_SwitchPower, variable="Status", value="1", level=1},
-				{type="value", device="Device2", service=SID_SwitchPower, variable="Status", value="1", level="2"}
-			},
-			actions = {
-				{
-					event = "start",
-					callback = function ()
-						traceCall("Rule_Level", "start")
-					end
-				}, {
-					event = "start",
-					level = "1",
-					callback = function ()
-						traceCall("Rule_Level", "start_level_1")
-					end
-				}, {
-					event = "start",
-					level = 2,
-					callback = function ()
-						traceCall("Rule_Level", "start_level_2")
-					end
-				}, {
-					event = "reminder",
-					timeDelay = 2,
-					callback = function ()
-						traceCall("Rule_Level", "reminder")
-					end
-				}, {
-					event = "reminder",
-					timeDelay = 2,
-					level = 1,
-					callback = function ()
-						traceCall("Rule_Level", "reminder_level_1")
-					end
-				}, {
-					event = "reminder",
-					timeDelay = 2,
-					level = 2,
-					callback = function ()
-						traceCall("Rule_Level", "reminder_level_2")
-					end
-				}, {
-					event = "end",
-					callback = function ()
-						traceCall("Rule_Level", "end")
-					end
-				}, {
-					event = "end",
-					level = "1",
-					callback = function ()
-						traceCall("Rule_Level", "end_level_1")
-					end
-				}, {
-					event = "end",
-					level = 2,
-					callback = function ()
-						traceCall("Rule_Level", "end_level_2")
-					end
-				}
-			}
-		})
-		
-		expect(4)
-
-		log("*** Start")
-		WatcherManager.start()
-
-		log("*** Rule level 1 active and Rule level 2 inactive")
-		luup.variable_set(SID_SwitchPower, "Status", "1", DeviceHelper.getIdByName("Device1"))
-		luup.variable_set(SID_SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device2"))
-		assertEquals(_calls["Rule_Level"], {
-			start = 1,
-			start_level_1 = 1
-		}, "The number of event call is correct")
-
-		luup.call_delay(
-			wrapAnonymousCallback(function ()
-				log("*** After waiting 5 secondes")
-				log("*** Rule level 1 still active and Rule level 2 active")
-				luup.variable_set(SID_SwitchPower, "Status", "1", DeviceHelper.getIdByName("Device2"))
-				assertEquals(_calls["Rule_Level"], {
-					start = 1,
-					start_level_1 = 1,
-					start_level_2 = 1,
-					reminder = 2,
-					reminder_level_1 = 2,
-					end_level_1 = 1
-				}, "The number of event call is correct")
-			end),
-			5, ""
-		)
-
-		luup.call_delay(
-			wrapAnonymousCallback(function ()
-				log("*** After waiting 7 secondes")
-				log("*** Rule level 1 still active and Rule level 2 inactive")
-				luup.variable_set(SID_SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device2"))
-				assertEquals(_calls["Rule_Level"], {
-					start = 1,
-					start_level_1 = 2,
-					start_level_2 = 1,
-					reminder = 3,
-					reminder_level_1 = 2,
-					reminder_level_2 = 1,
-					end_level_1 = 1,
-					end_level_2 = 1
-				}, "The number of event call is correct")
-			end),
-			7, ""
-		)
-
-		luup.call_delay(
-			wrapAnonymousCallback(function ()
-				log("*** After waiting 9 secondes")
-				log("*** Rule level 1 inactive and Rule level 2 still inactive")
-				luup.variable_set(SID_SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device1"))
-				assertEquals(_calls["Rule_Level"], {
-					start = 1,
-					start_level_1 = 2,
-					start_level_2 = 1,
-					reminder = 4,
-					reminder_level_1 = 3,
-					reminder_level_2 = 1,
-					["end"] = 1,
-					end_level_1 = 2,
-					end_level_2 = 1
-				}, "The number of event call is correct")
-			end),
-			9, ""
-		)
-
-		VeraMock:run()
-	end
-
-	function TestWatcherManager:test_rule_disable()
-		VeraMock:addDevice({description="Device1"})
-		WatcherManager.addRule({
-			name = "Rule_Disabled",
-			triggers = {
-				{type="value", device="Device1", service=SID_SwitchPower, variable="Status", value="1"},
-			},
-			actions = {
-				{
-					event = "start",
-					callback = function ()
-						traceCall("Rule_Disabled", "start")
-					end
-				}, {
-					event = "reminder",
-					timeDelay = 2,
-					callback = function ()
-						traceCall("Rule_Disabled", "reminder")
-					end
-				}, {
-					event = "end",
-					callback = function ()
-						traceCall("Rule_Disabled", "end")
-					end
-				}
-			}
-		})
-
-		expect(16)
-
-		log("*** Start")
-		WatcherManager.start()
-		assertFalse(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is not active")
-
-		log("*** Rule is disabled and could be active")
-		WatcherManager.disableRule("Rule_Disabled")
-		WatcherManager.disableRule("Rule_Disabled")
-		assertFalse(WatcherManager.isRuleEnabled("Rule_Disabled"), "Rule is not enabled")
-		luup.variable_set(SID_SwitchPower, "Status", "1", DeviceHelper.getIdByName("Device1"))
-		assertFalse(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is not active")
-		assertNil(_calls["Rule_Disabled"], "The number of event call is correct")
-
-		luup.call_delay(
-			wrapAnonymousCallback(function ()
-				log("*** After waiting 1 seconde")
-				log("*** Rule is enabled and could be active")
-				
-				WatcherManager.enableRule("Rule_Disabled")
-				WatcherManager.enableRule("Rule_Disabled")
-				assertTrue(WatcherManager.isRuleEnabled("Rule_Disabled"), "Rule is enabled")
-				assertTrue(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is now active")
-				assertEquals(_calls["Rule_Disabled"], {
-					start = 1
-				}, "The number of event call is correct")
-			end),
-			1, ""
-		)
-
-		luup.call_delay(
-			wrapAnonymousCallback(function ()
-				log("*** After waiting 4 secondes")
-				log("*** Rule is disabled and could be active")
-				WatcherManager.disableRule("Rule_Disabled")
-				WatcherManager.disableRule("Rule_Disabled")
-				assertFalse(WatcherManager.isRuleEnabled("Rule_Disabled"), "Rule is not enabled")
-				assertTrue(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is still active")
-				assertEquals(_calls["Rule_Disabled"], {
-					start = 1,
-					reminder = 1
-				}, "The number of event call is correct")
-			end),
-			4, ""
-		)
-
-		luup.call_delay(
-			wrapAnonymousCallback(function ()
-				log("*** After waiting 6 secondes")
-				log("*** Rule is disabled and could be inactive")
-				WatcherManager.disableRule("Rule_Disabled")
-				assertFalse(WatcherManager.isRuleEnabled("Rule_Disabled"), "Rule is not enabled")
-				luup.variable_set(SID_SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device1"))
-				assertTrue(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is still active")
-				assertEquals(_calls["Rule_Disabled"], {
-					start = 1,
-					reminder = 1
-				}, "The number of event call is correct")
-			end),
-			6, ""
-		)
-
-		luup.call_delay(
-			wrapAnonymousCallback(function ()
-				log("*** After waiting 8 secondes")
-				log("*** Rule is enabled and could be inactive")
-				WatcherManager.enableRule("Rule_Disabled")
-				WatcherManager.enableRule("Rule_Disabled")
-				assertTrue(WatcherManager.isRuleEnabled("Rule_Disabled"), "Rule is enabled")
-				assertFalse(WatcherManager.isRuleActive("Rule_Disabled"), "Rule is now not active")
-				assertEquals(_calls["Rule_Disabled"], {
-					start = 1,
-					reminder = 1,
-					["end"] = 1
-				}, "The number of event call is correct")
-			end),
-			8, ""
-		)
-
-		VeraMock:run()
-	end
-
-	function TestWatcherManager:test_rule_duration()
-		WatcherManager.addRule(ruleGarageTemperature)
-
-		expect(13)
-		local rule = WatcherManager.getRule("Rule_Garage_Temperature")
-		local expectedLastStatusUpdate = os.time()
-		local expectedLastUpdate
-
-		log("*** Start")
-		WatcherManager.start()
-		assertFalse(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is not active")
-
-		log("*** Garage temperature is below min threshold")
-		expectedLastUpdate = os.time()
-		luup.variable_set(SID_TemperatureSensor, "CurrentTemperature", "9", DeviceHelper.getIdByName("Garage_Temperature"))
-		assertTrue(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is active")
-		assertEquals(rule._lastStatusTime, expectedLastStatusUpdate, "Rule 'Rule_Garage_Temperature' last rule status update time is correct")
-		assertEquals(rule._context.lastUpdate, expectedLastUpdate, "Rule 'Rule_Garage_Temperature' last trigger update time is correct")
-		assertEquals(rule._context.value, "9", "Rule 'Rule_Garage_Temperature' context value has changed")
-
-		luup.call_delay(
-			wrapAnonymousCallback(function ()
-				log("*** After waiting 1 seconde")
-				log("*** Garage temperature is still below min threshold")
-				expectedLastUpdate = os.time()
-				luup.variable_set(SID_TemperatureSensor, "CurrentTemperature", 5, DeviceHelper.getIdByName("Garage_Temperature"))
-				assertTrue(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is active")
-			end),
-			1, ""
-		)
-
-		luup.call_delay(
-			wrapAnonymousCallback(function ()
-				log("*** After waiting 2 secondes")
-				log("*** Garage temperature is still below min threshold")
-				assertEquals(rule._lastStatusTime, expectedLastStatusUpdate, "Rule 'Rule_Garage_Temperature' last rule status update time is correct")
-				assertEquals(rule._context.lastUpdate, expectedLastUpdate, "Rule 'Rule_Garage_Temperature' last trigger update time has changed")
-				assertEquals(rule._context.value, '5', "Rule 'Rule_Garage_Temperature' context value has changed")
-			end),
-			2, ""
-		)
-
-		luup.call_delay(
-			wrapAnonymousCallback(function ()
-				log("*** After waiting 3 secondes")
-				log("*** Garage temperature is over min threshold")
-				expectedLastStatusUpdate = os.time()
-				expectedLastUpdate = os.time()
-				luup.variable_set(SID_TemperatureSensor, "CurrentTemperature", "15", DeviceHelper.getIdByName("Garage_Temperature"))
-				assertFalse(WatcherManager.isRuleActive("Rule_Garage_Temperature"), "Rule 'Rule_Garage_Temperature' is not active")
-			end),
-			3, ""
-		)
-
-		VeraMock:run()
-		assertEquals(rule._lastStatusTime, expectedLastStatusUpdate, "Rule 'Rule_Garage_Temperature' last rule status update time is correct")
-		assertEquals(rule._context.lastUpdate, expectedLastUpdate, "Rule 'Rule_Garage_Temperature' last trigger update time has changed")
-		assertEquals(rule._context.value, '15', "Rule 'Rule_Garage_Temperature' context value has changed")
-	end
-
-	function TestWatcherManager:test_enhanced_message()
-		local message
-		local context = {}
-
-		log("*** #value#")
-
-		context.value = 15
-		message = WatcherManager.getEnhancedMessage ("valeur #value#", context)
-		assertEquals(message, "valeur 15", "Value Integer")
-
-		context.value = "32"
-		message = WatcherManager.getEnhancedMessage ("valeur #value#", context)
-		assertEquals(message, "valeur 32", "Value String")
-
-		log("*** #duration# and #durationfull#")
-
-		context.lastStatusUpdate = os.time() - 1
-		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
-		assertEquals(message, "durée - P1S - une seconde", "Duration 1 second")
-
-		context.lastStatusUpdate = os.time() - 2
-		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
-		assertEquals(message, "durée - P2S - 2 secondes", "Duration of 2 seconds")
-
-		context.lastStatusUpdate = os.time() - 60
-		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
-		assertEquals(message, "durée - P1M0S - une minute", "Duration of 1 minute")
-
-		context.lastStatusUpdate = os.time() - 132
-		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
-		assertEquals(message, "durée - P2M12S - 2 minutes et 12 secondes", "Duration of 2 minutes and 12 seconds")
-
-		context.lastStatusUpdate = os.time() - 3600
-		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
-		assertEquals(message, "durée - P1H0M0S - une heure", "Duration of 1 hour")
-
-		context.lastStatusUpdate = os.time() - 8415
-		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
-		assertEquals(message, "durée - P2H20M15S - 2 heures et 20 minutes", "Duration of 2 hours et 20 minutes with seconds")
-
-		context.lastStatusUpdate = os.time() - 91225
-		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
-		assertEquals(message, "durée - P1DT1H20M25S - 1 jour et une heure", "Duration of 1 day and 1 hour with minutes and seconds")
-
-		context.lastStatusUpdate = os.time() - 188432
-		message = WatcherManager.getEnhancedMessage ("durée - #duration# - #durationfull#", context)
-		assertEquals(message, "durée - P2DT4H20M32S - 2 jours et 4 heures", "Duration of 2 days and 4 hours with minutes and seconds")
-
-	end
-
-	function TestWatcherManager:test_timer()
+	function TestWatcherManager:test_trigger_timer()
 		WatcherManager.addRule({
 			name = "Rule_Timer",
 			triggers = {
@@ -897,12 +917,12 @@ TestWatcherManager = {}
 		VeraMock:run()
 	end
 
-	function TestWatcherManager:test_time()
+	function TestWatcherManager:test_condition_time()
 		VeraMock:addDevice({description="Device1"})
 		WatcherManager.addRule({
 			name = "Rule_Time",
 			triggers = {
-				{type="value", device="Device1", service=SID_SwitchPower, variable="Status", value="1"}
+				{type="value", device="Device1", service=SID.SwitchPower, variable="Status", value="1"}
 			},
 			actions = {
 				{
@@ -950,11 +970,11 @@ TestWatcherManager = {}
 
 		log("*** Start")
 		WatcherManager.start()
-		assertFalse(WatcherManager.isRuleActive("Rule_Time"), "Rule 'Rule_Time' is not active")
+		assertFalse(WatcherManager.isRuleActive("Rule_Time"), "Rule is not active")
 
 		log("*** Rule is active")
-		luup.variable_set(SID_SwitchPower, "Status", "1", DeviceHelper.getIdByName("Device1"))
-		assertTrue(WatcherManager.isRuleActive("Rule_Time"), "Rule 'Rule_Time' is active")
+		luup.variable_set(SID.SwitchPower, "Status", "1", DeviceHelper.getIdByName("Device1"))
+		assertTrue(WatcherManager.isRuleActive("Rule_Time"), "Rule is active")
 		assertEquals(_calls["Rule_Time"], {
 			start = 1
 		}, "The number of event call is correct")
@@ -999,7 +1019,7 @@ TestWatcherManager = {}
 					reminderAbove = 1
 				}, "The number of event call is correct")
 				log("*** Rule is not active")
-				luup.variable_set(SID_SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device1"))
+				luup.variable_set(SID.SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device1"))
 				assertFalse(WatcherManager.isRuleActive("Rule_Time"), "Rule is now not active")
 				assertEquals(_calls["Rule_Time"], {
 					start = 1,
@@ -1015,7 +1035,55 @@ TestWatcherManager = {}
 		VeraMock:run()
 	end
 
+	function TestWatcherManager:test_action_action()
+		VeraMock:addDevice({description="Device1"})
+		VeraMock:addDevice({description="Device2"})
+		VeraMock:addDevice({description="Device3"})
+		WatcherManager.addRule({
+			name = "Rule_Action",
+			triggers = {
+				{type="value", device="Device1", service=SID.SwitchPower, variable="Status", value="1"}
+			},
+			actions = {
+				{
+					event = "start",
+					type = "action",
+					devices={"Device2", "Device3"}, service=SID.SwitchPower, action="SetTarget", arguments={NewTarget="1"}
+				}, {
+					event = "end",
+					type = "action",
+					device="Device2", service=SID.SwitchPower, action="SetTarget", arguments={NewTarget="0"}
+				}
+			}
+		})
+
+		expect(6)
+
+		log("*** Start")
+		WatcherManager.start()
+
+		log("*** Rule is active")
+		luup.variable_set(SID.SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device2"))
+		luup.variable_set(SID.SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device3"))
+		luup.variable_set(SID.SwitchPower, "Status", "1", DeviceHelper.getIdByName("Device1"))
+		assertTrue(WatcherManager.isRuleActive("Rule_Action"), "Rule is active")
+		assertEquals(luup.variable_get(SID.SwitchPower, "Status", DeviceHelper.getIdByName("Device2")), "1", "Device2 is ON")
+		assertEquals(luup.variable_get(SID.SwitchPower, "Status", DeviceHelper.getIdByName("Device3")), "1", "Device3 is ON")
+
+		log("*** Rule is not active")
+		luup.variable_set(SID.SwitchPower, "Status", "0", DeviceHelper.getIdByName("Device1"))
+		assertFalse(WatcherManager.isRuleActive("Rule_Action"), "Rule is not active")
+		assertEquals(luup.variable_get(SID.SwitchPower, "Status", DeviceHelper.getIdByName("Device2")), "0", "Device2 is OFF")
+		assertEquals(luup.variable_get(SID.SwitchPower, "Status", DeviceHelper.getIdByName("Device3")), "1", "Device3 is ON")
+
+		VeraMock:run()
+	end
+
+	function TestWatcherManager:test_action_custom()
+		
+	end
+
 -- run all tests
 print("")
 LuaUnit:run()
---LuaUnit:run("TestWatcherManager:test_trigger_rule")
+--LuaUnit:run("TestWatcherManager:test_action_action")

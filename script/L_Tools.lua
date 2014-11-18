@@ -1,56 +1,58 @@
+--[[ 
+Description: Manage your Vera by scripts
+Homepage: https://github.com/vosmont/Vera-Plugin-WatcherManager
+Author: vosmont
+License: MIT License, see LICENSE
+]]--
+
 -- NOTE : Limitation of mios UI5
 -- The compressed modules must be declared with module(), and not using any of the alternative forms.
 module("Tools", package.seeall)
 
+_VERSION = "0.0.2"
+
 -- **************************************************
--- Définition des devices et services
+--  Service definitions
 -- **************************************************
 
-_G.DID_BinaryLight = "urn:schemas-upnp-org:device:BinaryLight:1"
-_G.SID_SwitchPower = "urn:upnp-org:serviceId:SwitchPower1"
-
-_G.DID_DimmableLight = "urn:schemas-upnp-org:device:DimmableLight:1"
-_G.SID_Dimming = "urn:upnp-org:serviceId:Dimming1"
-
-_G.SID_SecuritySensor = "urn:micasaverde-com:serviceId:SecuritySensor1"
-
-_G.DID_MotionSensor = "urn:schemas-micasaverde-com:device:MotionSensor:1"
-_G.SID_MotionSensor = "urn:micasaverde-com:serviceId:MotionSensor1"
-
-_G.DID_LightSensor = "urn:schemas-micasaverde-com:device:LightSensor:1"
-_G.SID_LightSensor = "urn:micasaverde-com:serviceId:LightSensor1"
-
-_G.DID_TemperatureSensor = "urn:schemas-micasaverde-com:device:TemperatureSensor:1"
-_G.SID_TemperatureSensor = "urn:upnp-org:serviceId:TemperatureSensor1"
-
-_G.DID_HumiditySensor = "urn:schemas-micasaverde-com:device:HumiditySensor:1"
-_G.SID_HumiditySensor = "urn:micasaverde-com:serviceId:HumiditySensor1"
-
-_G.SID_Karotz = "urn:antor-fr:serviceId:Karotz1"
-
-_G.SID_VariableContainer = "urn:upnp-org:serviceId:VContainer1"
-
-_G.SID_HomeAutomationGateway = "urn:micasaverde-com:serviceId:HomeAutomationGateway1"
-
-_G.DID_PowerMeter = "urn:schemas-micasaverde-com:device:PowerMeter:1"
-_G.SID_EnergyMetering = "urn:micasaverde-com:serviceId:EnergyMetering1"
-
-_G.DID_VirtualSwitch ="urn:schemas-upnp-org:device:VSwitch:1"
-_G.SID_VirtualSwitch = "urn:upnp-org:serviceId:VSwitch1"
-
-_G.SID_PanTiltZoom = "urn:micasaverde-com:serviceId:PanTiltZoom1"
-
-_G.DID_SmartSwitchController = "urn:schemas-hugheaves-com:device:SmartSwitchController:1"
-_G.SID_SmartSwitchController = "urn:hugheaves-com:serviceId:SmartSwitchController1"
-
-_G.DID_BatteryMonitor = "urn:schemas-upnp-org:device:BatteryMonitor:1"
-_G.SID_BatteryMonitor = "urn:upnp-org:serviceId:BatteryMonitor1"
-
-_G.SID_MultiSwitch = "urn:dcineco-com:serviceId:MSwitch1"
-
-_G.DID_CombinationSwitch = "urn:schemas-futzle-com:device:CombinationSwitch:1"
-
-_G.SID_RGBController = "urn:upnp-org:serviceId:RGBController1"
+_G.DID = {
+	BinaryLight = "urn:schemas-upnp-org:device:BinaryLight:1",
+	DimmableLight = "urn:schemas-upnp-org:device:DimmableLight:1",
+	MotionSensor = "urn:schemas-micasaverde-com:device:MotionSensor:1",
+	LightSensor = "urn:schemas-micasaverde-com:device:LightSensor:1",
+	TemperatureSensor = "urn:schemas-micasaverde-com:device:TemperatureSensor:1",
+	HumiditySensor = "urn:schemas-micasaverde-com:device:HumiditySensor:1",
+	PowerMeter = "urn:schemas-micasaverde-com:device:PowerMeter:1",
+	VirtualSwitch ="urn:schemas-upnp-org:device:VSwitch:1",
+	SmartSwitchController = "urn:schemas-hugheaves-com:device:SmartSwitchController:1",
+	BatteryMonitor = "urn:schemas-upnp-org:device:BatteryMonitor:1",
+	CombinationSwitch = "urn:schemas-futzle-com:device:CombinationSwitch:1"
+}
+_G.SID = {
+	SwitchPower = "urn:upnp-org:serviceId:SwitchPower1",
+	Dimming = "urn:upnp-org:serviceId:Dimming1",
+	SecuritySensor = "urn:micasaverde-com:serviceId:SecuritySensor1",
+	MotionSensor = "urn:micasaverde-com:serviceId:MotionSensor1",
+	LightSensor = "urn:micasaverde-com:serviceId:LightSensor1",
+	TemperatureSensor = "urn:upnp-org:serviceId:TemperatureSensor1",
+	HumiditySensor = "urn:micasaverde-com:serviceId:HumiditySensor1",
+	HomeAutomationGateway = "urn:micasaverde-com:serviceId:HomeAutomationGateway1",
+	EnergyMetering = "urn:micasaverde-com:serviceId:EnergyMetering1",
+	PanTiltZoom = "urn:micasaverde-com:serviceId:PanTiltZoom1",
+	--
+	SmartSwitchController = "urn:hugheaves-com:serviceId:SmartSwitchController1",
+	VirtualSwitch = "urn:upnp-org:serviceId:VSwitch1",
+	VariableContainer = "urn:upnp-org:serviceId:VContainer1",
+	BatteryMonitor = "urn:upnp-org:serviceId:BatteryMonitor1",
+	MultiSwitch = "urn:dcineco-com:serviceId:MSwitch1",
+	RGBController = "urn:upnp-org:serviceId:RGBController1"
+}
+setmetatable(SID,{
+	__index = function(t, serviceNickname)
+		luup.log("Service with nickname '" ..  tostring(serviceNickname) .. "' is unknown", 2)
+		return "urn:unknown:serviceId:unknown"
+	end
+})
 
 -- **************************************************
 -- Table functions
@@ -181,21 +183,23 @@ _G.DeviceHelper = {
 		return nil
 	end,
 
+	-- Return if the device supports the service
 	supportsService = function (deviceName, serviceId)
 		local deviceId = DeviceHelper.getIdByName(deviceName)
 		return luup.device_supports_service(serviceId, deviceId)
 	end,
 
+	-- Get device status
 	getStatus = function (deviceName)
 		local status
 		local deviceId = DeviceHelper.getIdByName(deviceName)
 		if (deviceId == nil) then
 			return nil
 		end
-		if (luup.devices[deviceId].device_type == DID_VirtualSwitch) then
-			status = luup.variable_get(SID_VirtualSwitch, "Status", deviceId)
+		if (luup.devices[deviceId].device_type == DID.VirtualSwitch) then
+			status = luup.variable_get(SID.VirtualSwitch, "Status", deviceId)
 		else
-			status = luup.variable_get(SID_SwitchPower, "Status", deviceId)
+			status = luup.variable_get(SID.SwitchPower, "Status", deviceId)
 		end
 		return status
 	end,
@@ -205,10 +209,10 @@ _G.DeviceHelper = {
 		if (deviceId == nil) then
 			return nil
 		end
-		if (luup.devices[deviceId].device_type == DID_VirtualSwitch) then
-			luup.variable_watch(callback, SID_VirtualSwitch, "Status", deviceId)
+		if (luup.devices[deviceId].device_type == DID.VirtualSwitch) then
+			luup.variable_watch(callback, SID.VirtualSwitch, "Status", deviceId)
 		else
-			luup.variable_watch(callback, SID_SwitchPower, "Status", deviceId)
+			luup.variable_watch(callback, SID.SwitchPower, "Status", deviceId)
 		end
 		return status
 	end,
@@ -218,10 +222,10 @@ _G.DeviceHelper = {
 		if (deviceId == nil) then
 			return nil
 		end
-		if (luup.devices[deviceId].device_type == DID_VirtualSwitch) then
-			luup.call_action(SID_VirtualSwitch, "SetTarget", {newTargetValue = target}, deviceId)
+		if (luup.devices[deviceId].device_type == DID.VirtualSwitch) then
+			luup.call_action(SID.VirtualSwitch, "SetTarget", {newTargetValue = target}, deviceId)
 		else
-			luup.call_action(SID_SwitchPower, "SetTarget", {newTargetValue = target}, deviceId)
+			luup.call_action(SID.SwitchPower, "SetTarget", {newTargetValue = target}, deviceId)
 		end
 	end,
 
@@ -230,7 +234,7 @@ _G.DeviceHelper = {
 		if (deviceId == nil) then
 			return nil
 		end
-		return luup.variable_get(SID_Dimming, "LoadLevelStatus", deviceId)
+		return luup.variable_get(SID.Dimming, "LoadLevelStatus", deviceId)
 	end,
 
 	getLoadLevelTarget = function (deviceName)
@@ -238,7 +242,7 @@ _G.DeviceHelper = {
 		if (deviceId == nil) then
 			return nil
 		end
-		return luup.variable_get(SID_Dimming, "LoadLevelTarget", deviceId)
+		return luup.variable_get(SID.Dimming, "LoadLevelTarget", deviceId)
 	end,
 
 	setLoadLevelTarget = function (deviceName, loadLevelTarget)
@@ -247,7 +251,7 @@ _G.DeviceHelper = {
 			return nil
 		end
 		if (luup.devices[deviceId].category_num == 2) then
-			luup.call_action(SID_Dimming, "SetLoadLevelTarget", {newLoadlevelTarget = loadLevelTarget}, deviceId)
+			luup.call_action(SID.Dimming, "SetLoadLevelTarget", {newLoadlevelTarget = loadLevelTarget}, deviceId)
 		elseif (luup.devices[deviceId].category_num == 3) then
 			if (tonumber(loadLevelTarget) < 50) then
 				setDeviceTarget(deviceId, "0")
@@ -274,22 +278,22 @@ _G.SceneHelper = {
 			sceneId = SceneHelper.getIdByName(sceneId)
 		end
 		if (sceneId ~= nil) then
-			luup.call_action(SID_HomeAutomationGateway, "RunScene", {SceneNum = sceneId}, 0)
+			luup.call_action(SID.HomeAutomationGateway, "RunScene", {SceneNum = sceneId}, 0)
 		end
 	end
 }
 
 _G.VariableContainerHelper = {
 	setVar = function (devID, varN, value)
-		luup.variable_set(SID_VariableContainer, "Variable" .. varN, value or 0, devID)
+		luup.variable_set(SID.VariableContainer, "Variable" .. varN, value or 0, devID)
 	end,
 
 	setVarName = function (devID, varNameN, value)
-		luup.variable_set(SID_VariableContainer, "VariableName" .. varNameN, value or "undefined", devID)
+		luup.variable_set(SID.VariableContainer, "VariableName" .. varNameN, value or "undefined", devID)
 	end,
 
 	getVar = function (devID, varN)
-		local value = luup.variable_get(SID_VariableContainer, "Variable" .. varN, devID)
+		local value = luup.variable_get(SID.VariableContainer, "Variable" .. varN, devID)
 		return value
 	end
 }

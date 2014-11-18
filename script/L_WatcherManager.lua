@@ -1,3 +1,10 @@
+--[[ 
+Description: Manage your Vera by scripts
+Homepage: https://github.com/vosmont/Vera-Plugin-WatcherManager
+Author: vosmont
+License: MIT License, see LICENSE
+]]--
+
 -- NOTE : Limitation of mios UI5
 -- The compressed modules must be declared with module(), and not using any of the alternative forms.
 -- See http://wiki.micasaverde.com/index.php/UI4_UI5_Migration
@@ -7,7 +14,7 @@ require("L_Tools")
 local json = require("json") -- See http://json.luaforge.net/
 
 local WatcherManager = {
-	_VERSION = "0.0.1"
+	_VERSION = "0.0.2"
 }
 
 local _taskId = -1
@@ -165,9 +172,13 @@ end
 				callback = _G[hook[2]]
 			end
 			if (callback ~= nil) then
-				if not callback(rule) then
+				local status, result = pcall(callback, rule)
+				if not status then
+					log("ERROR:" .. result, 1, "doHook")
+				elseif not result then
 					isHookOK = false
 				end
+				assert(status, "ERROR: " .. tostring(result))
 			end
 		end
 		return isHookOK
@@ -191,24 +202,18 @@ local ConditionTypes = {
 		["time+"] = "time"
 	}
 }
--- Unknown Condition type
-setmetatable(ConditionTypes,{
-	__index = function(t, conditionTypeName)
-		local conditionTypeEquivalentName = ConditionTypes._index[conditionTypeName]
-		if (conditionTypeEquivalentName == nil) then
-			log("SETTING WARNING - Condition type '" .. tostring(conditionTypeName) .. "' is unknown", "ConditionTypes.get")
-			conditionTypeEquivalentName = "unknown"
+
+	-- Unknown Condition type
+	setmetatable(ConditionTypes,{
+		__index = function(t, conditionTypeName)
+			local conditionTypeEquivalentName = ConditionTypes._index[conditionTypeName]
+			if (conditionTypeEquivalentName == nil) then
+				log("SETTING WARNING - Condition type '" .. tostring(conditionTypeName) .. "' is unknown", "ConditionTypes.get")
+				conditionTypeEquivalentName = "unknown"
+			end
+			return ConditionTypes[conditionTypeEquivalentName]
 		end
-		return ConditionTypes[conditionTypeEquivalentName]
-	end
-})
-
-
-	-- ConditionTypes.get = function (typeName)
-		-- local conditionTypeName = ConditionTypes._index[typeName] or "unknown"
-		-- return ConditionTypes[conditionTypeName]
-	-- end
-
+	})
 	ConditionTypes.unknown = {
 		init = function (condition)
 			local msg = ConditionTypes.getMessage(condition)
@@ -274,19 +279,15 @@ setmetatable(ConditionTypes,{
 		updateStatus = function (condition)
 			local msg = getMessage(condition)
 			local context = condition._context
-			for j, device in ipairs(condition.devices) do
+			for j, deviceId in ipairs(condition.deviceIds) do
 				-- Condition of type 'value' / 'value-' / 'value+' / 'value<>'
-				if (condition.deviceId == nil) then
-					condition.deviceId = DeviceHelper.getIdByName(condition.device)
-					condition.device = luup.devices[condition.deviceId].description
-				end
-				msg = msg .. " for device #" .. tostring(condition.deviceId) .. "-'" .. condition.device .. "'"
+				msg = msg .. " for device #" .. tostring(deviceId) .. "-'" .. condition.devices[j] .. "'"
 							.. " - '" .. condition.service .. "-" ..  condition.variable .. "'"
 
 				-- Update value if too old (not recently updated by a trigger for example)
 				if (os.difftime(os.time(), context.lastUpdate) >= 1 ) then
 					msg = msg .. " (value retrieved)"
-					context.value, context.lastUpdate = luup.variable_get(condition.service, condition.variable, condition.deviceId)
+					context.value, context.lastUpdate = luup.variable_get(condition.service, condition.variable, deviceId)
 				end
 
 				-- Status update
@@ -294,9 +295,10 @@ setmetatable(ConditionTypes,{
 				if (condition.value ~= nil) then
 					-- a threshold is defined
 					if ((context.value == nil)
-						or ((condition.type == "value") and (tostring(condition.value) ~= tostring(context.value)))
+						or ((condition.type == "value") and (tonumber(condition.value) ~= tonumber(context.value)))
 						or ((condition.type == "value-") and (tonumber(condition.value) < tonumber(context.value)))
 						or ((condition.type == "value+") and (tonumber(condition.value) > tonumber(context.value)))
+						or ((condition.type == "value<>") and (tonumber(condition.value) == tonumber(context.value)))
 					) then
 						-- Threshold is not respected
 						msg = msg .. " - is inactive - The value condition is not respected"
@@ -401,6 +403,7 @@ setmetatable(ConditionTypes,{
 	-- Condition of type 'time'
 	ConditionTypes.time = {
 		init = function (condition)
+			-- Nothing to do
 		end,
 
 		-- See http://wiki.micasaverde.com/index.php/Luup_Lua_extensions#function:_call_timer
@@ -414,7 +417,7 @@ setmetatable(ConditionTypes,{
 		end,
 
 		register = function (trigger)
-			-- Nothing to do
+			-- Nothing to do (not a trigger, just a condition)
 		end,
 
 		updateStatus = function (condition)
@@ -697,10 +700,12 @@ setmetatable(ConditionTypes,{
 		local message = "Rule '" .. ruleName .. "'"
 		local rule = _rules[ruleName]
 		local action = rule.actions[actionId]
-		if not doHook("beforeDoingAction", ruleName, actionId) then
-			log(message .. " - A hook prevent from doing action #" .. tostring(actionId), 3, "doRuleAction")
+
+		if not doHook("beforeDoingAction", rule, actionId) then
+		log(message .. " - A hook prevent from doing action #" .. tostring(actionId), 3, "doRuleAction")
 			return
 		end
+
 		if (action.callback ~= nil) then
 			-- Action de type callback
 			log(message .. " - Do action #" .. tostring(actionId) ..  " of type 'function'", 3, "doRuleAction")
@@ -710,19 +715,19 @@ setmetatable(ConditionTypes,{
 			elseif ((type(action.callback) == "string") and (type(_G[action.callback]) == "function")) then
 				ok, err = pcall(_G[action.callback], rule._context)
 			end
-			assert(ok, "ERROR: " .. tostring(err))
 			if not ok then 
 				log("ERROR: " .. err, 1, "doRuleAction")
 			end
+			assert(ok, "ERROR: " .. tostring(err))
 		elseif (action.types ~= nil) then
 			for _, actionType in ipairs(action.types) do
 				-- Action enregistrée
 				log(message .. " - Do action #" .. tostring(actionId) ..  " of type '" .. actionType .. "'", 3, "doRuleAction")
 				local ok, err = pcall(_actions[actionType], action, rule._context)
-				assert(ok, "ERROR: " .. tostring(err))
 				if not ok then
 					log("ERROR:" .. err, 1, "doRuleAction")
 				end
+				assert(ok, "ERROR: " .. tostring(err))
 			end
 		else
 			log(message .. " - Don't know what to do !", 1, "doRuleAction")
