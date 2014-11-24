@@ -1,29 +1,27 @@
-Vera-Plugin-WatcherManager
-==========================
+#Vera-Plugin-WatcherManager
 
-# Contexte
+La gestion des évènements domotiques, par les scènes dans la Vera, est compliquée à maintenir et à mettre en œuvre, dès qu'il y a des attentes à faire avec des reprises sous condition.
 
-La gestion des évènements domotiques, par les scènes dans la Vera, est compliqué à maintenir et à mettre en oeuvre, dès qu'il y a des attentes à faire avec des reprises sous condition.
+Ce plugin permet de gérer plus simplement ces évènements par des scripts LUA.
 
-Il est paradoxalement plus simple de gérer ces évènements par des scripts LUA.
+## Principe de fonctionnement
 
-# Principe de fonctionnement
-
-- Un plugin simplifié sous forme de module LUA.
+- Un plugin sous forme de module LUA; pas d'interface graphique.
 - Le paramétrage (en LUA) à mettre dans le script lancé au démarrage de la Vera.
 - Un système de hook permettant d'étendre les fonctionnalités.
 
 Les écueils :
 - Il n'y a pas d'interface graphique de paramétrage (trop compliqué à maintenir et à développer).
-- Nécessite d'être un utilisateur avancé sur la Vera (certain paramétrage sont près proche du moteur luup)
+- Nécessite d'être un utilisateur avancé sur la Vera (certain paramétrage sont près proches du moteur luup)
 - En cas de problème, il faut aller voir les logs pour analyse.
 
-# Installation
+## Installation
 
 Pour l'utiliser
 
-1. il suffit de transférer les fichiers **L_Tools.lua** et **L_WatcherManager.lua** via l'interface de la Vera (UI->Develop Apps->Luup files).
-2. et mettre dans le fichier de démarrage (à tester d'abord dans UI->Develop Apps->Test Luup code (Lua))
+1. Transférer les fichiers **L_Tools.lua** et **L_WatcherManager.lua** via l'interface de la Vera (UI->Develop Apps->Luup files).
+
+2. Mettre dans le fichier de démarrage (à tester d'abord dans UI->Develop Apps->Test Luup code (Lua))
 
 ```lua
 require("L_Tools")
@@ -43,44 +41,70 @@ end
 luup.call_delay("startCustomModules", 30, nil)
 ```
 
-# Paramétrage
+## Paramétrage
 
-Il faut paramétrer des règles.
+### Ajout d'une règle
 
-Une règle a :
+Le plugin WatcherManager fonctionne à partir de règles. Une règle a :
+
 - des triggers (déclencheurs)
-- des conditions éventuelles à respecter
-- des actions à effectuer pour un évènement particulier (début, relance, fin).
-  Une action peut avoir des conditions particulières
+- des conditions **éventuelles** à respecter
+- des actions à effectuer pour un stade particulier (début, relance, fin).
+  Une action peut avoir des conditions particulières en plus des conditions de la règle.
 
+Au démarrage du plugin, celui-ci s'enregistre auprès de la Vera en fonction des triggers définis dans les règles.
+C'est la venue des évènements définis dans les triggers (valeur d'un module qui change, une certaine heure de la journée, ...) qui déclenche le calcul du statut de la règle liée.
 
-## Ajout d'une règle
+Pour qu'une règle soit et reste active, il faut :
+
+- qu'au moins un de ses triggers soit déclenché
+- que toutes les conditions soient remplies
+
+Si ces critères ne sont plus remplis, la règle devient inactive.
+
+> Pour simplifier le paramétrage, le nom des modules est utilisé à la place de leur identifiant.
+> Ceci permet une plus grande souplesse lors d'un changement d'identifiant d'un module (même fonction mais technologie différente ou changement d'identifiant lors d'un changement de pile)
 
 ```lua
 WatcherManager.addRule({
-	name = "#RULE_NAME#",
+	name = "<RULE_NAME>",
 	triggers = {
-		#TRIGGER1#,
-		#TRIGGER2#,
+		<TRIGGER1>,
+		<TRIGGER2>,
 		...
 	},
 	conditions = {
-		#CONDITION1#,
-		#CONDITION2#,
+		<CONDITION1>,
+		<CONDITION2>,
 		...
 	},
 	actions = {
-		#ACTION1#,
-		#ACTION2#,
+		<ACTION1>,
+		<ACTION2>,
 		...
 	}
 })
 ```
 
-## Types de Condition / Trigger
+### Conditions / Triggers
 
-### Type "value"
+#### Type "value"
 
+Le type "value" est en rapport avec la **valeur** d'une **variable** pour un **service**, pour un **module**.
+
+Pour plus de détail, consultez le Wiki de la Vera :
+http://wiki.micasaverde.com/index.php/Luup_Lua_extensions#function:_variable_get
+http://wiki.micasaverde.com/index.php/Luup_Lua_extensions#function:_variable_watch
+
+Un **trigger**, permet d'**observer** un ou plusieurs modules et d'agir ensuite en fonction de la valeur de la variable.
+
+Une **condition**, permet de **vérifier** la valeur de la variable d'un ou de plusieurs modules.
+
+Définition pour **un** module à observer/vérifier :
+```lua
+{type="<TYPE>", device="<DEVICE_NAME1>", service="<SERVICE_ID>", variable="<VARIABLE_NAME>", value="<VALUE>"}
+```
+Définition pour **plusieurs** modules à observer/vérifier :
 ```lua
 {type="<TYPE>", devices={"<DEVICE_NAME1>", "<DEVICE_NAME2>", ...}, service="<SERVICE_ID>", variable="<VARIABLE_NAME>", value="<VALUE>"}
 ```
@@ -88,40 +112,58 @@ avec
 
 Paramètre | Description
 ----------|------------
-TYPE | Le type de condition/trigger (voir ci-dessous)
-DEVICE_NAME1, DEVICE_NAME2, ... | Le nom des modules liés à la condition/trigger
-SERVICE_ID | L'id du service
-VARIABLE_NAME | Le nom de la variable
-VALUE | Le seuil
+*TYPE* | Le type de condition/trigger (voir table ci-dessous)
+*DEVICE_NAME1*, *DEVICE_NAME2*, ... | Le nom des modules liés à la condition/trigger
+*SERVICE_ID* | L'id du service
+*VARIABLE_NAME* | Le nom de la variable
+*VALUE* | Le seuil
 
-Type | Description
+TYPE | Description
 ----------|------------
-value | Valeur de la variable égale au seuil
-value+ | Valeur de la variable inférieure au seuil
-value+ | Valeur de la variable supérieure au seuil
-value<> | Valeur de la variable différente du seuil
+*value* | Valeur de la variable égale au seuil
+*value-* | Valeur de la variable inférieure au seuil
+*value+* | Valeur de la variable supérieure au seuil
+*value<>* | Valeur de la variable différente du seuil
 
+> A noter, pour les types "value" et "value<>", il est possible d'utiliser une expression régulière pour la valeur seuil. Le paramètre est alors *PATTERN* à la place de *VALUE*.
 
-### Type "rule"
+```lua
+{type="<TYPE>", device="<DEVICE_NAME1>", service="<SERVICE_ID>", variable="<VARIABLE_NAME>", pattern="<PATTERN>"}
+```
 
-TODO
-
-### Type "timer"
-
-TODO
-
-
-### Type "time"
+#### Type "rule"
 
 TODO
 
-## Actions
+#### Type "timer"
 
 TODO
 
+http://wiki.micasaverde.com/index.php/Luup_Lua_extensions#function:_call_timer
 
 
-# Utilisation
+#### Type "time"
+
+TODO
+
+### Actions
+
+Les actions peuvent être effectuées à différents moment de la vie d'une règle (en fonction de son statut) :
+
+- à l'activation de la règle ("start")
+- tant que la règle est active ("reminder"). L'action peut être effectuée plusieurs fois.
+- à la désactivation de la règle ("end")
+ 
+#### Type "action"
+
+
+#### Type callback
+
+
+#### Type personnalisé
+
+
+## Utilisation
 
 Activation des logs
 
@@ -132,11 +174,12 @@ Activation des logs
 DataCollector.setVerbosity(4)
 ```
 
-# Exemples
+## Exemples
 
-## Ajout d'une action personnalisée
+### Ajout d'une action personnalisée
 
-Ajout d'une action message vocal. Cette action peut être ensuite utilisée dans les règles.
+Ajout d'une action message vocal.
+Cette action peut être ensuite utilisée dans les règles.
 
 ```lua
 WatcherManager.addAction(
@@ -148,29 +191,27 @@ WatcherManager.addAction(
 )
 ```
 
-## Contrôle du Home-Cinéma
-
-Le Home-Cinéma est sur une prise avec mesure d'énergie.
-
-Passé 100W, la télévision est considérée comme allumée, un mail est alors envoyé.
-
-Tant que la télévision est allumée, un message vocal est joué toutes les 30 minutes (seulement entre 7 heures et 20 heures et si XBMC ne joue pas de la musique).
-
-A l'extinction, un mail est envoyé.
+### Contrôle du Home-Cinéma
 
 ```lua
 WatcherManager.addRule({
 	name = "HomeTheater",
+	-- QUAND la prise du Home-Cinéma consomme plus de 100W
 	triggers = {
 		{type="value+", device="Lounge_HomeTheater", service=SID.EnergyMetering, variable="Watts", value="100"}
 	},
 	actions = {
+		-- ALORS envoi d'un mail d'avertissement de l'allumage
 		{
 			event = "start",
 			type = "email",
 			subject = "Événement domotique",
 			message = "Le home-cinéma vient d'être allumé"
-		}, {
+		},
+		-- RAPPEL toutes les 30 minutes, un message vocal est joué
+		-- A CONDITION QUE il est entre 7 heures et 20 heures 
+		--          ET QUE xbmc ne gère pas de la musique
+		{
 			event = "reminder",
 			conditions = {
 				{type="time", between={"07:00:00", "20:00:00"}},
@@ -179,7 +220,9 @@ WatcherManager.addRule({
 			timeDelay = 1800, -- 30 minutes
 			type = "vocal",
 			message = "La télévision est allumée depuis #durationfull#"
-		}, {
+		},
+		-- FINALEMENT envoi d'un mail d'avertissement de l'extinction
+		{
 			event = "end",
 			types = {"email"},
 			subject = "Événement domotique",
@@ -189,36 +232,41 @@ WatcherManager.addRule({
 })
 ```
 
-## Surveillance de la porte du garage
-
-Lorsque la porte du garage est armée et s'ouvre, une alerte vocale et un email sont générés.
-
-Tant que la porte est ouverte et armée, une alerte vocale est émise toutes les 10 minutes.
-
-Quand la porte du garage est armée et se ferme, une alerte vocale et un email sont générés.
+### Surveillance de la porte du garage
  
 ```lua
 WatcherManager.addRule({
 	name = "Garage_Door",
+	-- QUAND la porte du garage est ouverte
 	triggers = {
 		{type="value", device="Garage_SectionalDoor", service=SID.SecuritySensor, variable="Tripped", value="1"}
 	},
-	conditions = {
-		{type="value", device="Garage_SectionalDoor", service=SID.SecuritySensor, variable="Armed", value="1"}
-	},
 	actions = {
+		-- ALORS envoi d'un mail et annonce vocale de l'ouverture
+		-- A CONDITION QUE la porte du garage est armée
 		{
 			event = "start",
+			conditions = {
+				{type="value", device="Garage_SectionalDoor", service=SID.SecuritySensor, variable="Armed", value="1"}
+			},
 			types = {"vocal", "email"},
 			subject = "Événement domotique",
 			message = "La porte du garage est en train de s'ouvrir"
-		}, {
+		},
+		-- RAPPEL toutes les 10 minutes, un message vocal est joué
+		{
 			event = "reminder",
 			timeDelay = 600, -- 10 minutes
 			type = "vocal",
 			message = "Attention, la porte du garage est ouverte depuis #durationfull#"
-		}, {
+		},
+		-- FINALEMENT envoi d'un mail d'avertissement de l'extinction
+		-- A CONDITION QUE la porte du garage est armée
+		{
 			event = "end",
+			conditions = {
+				{type="value", device="Garage_SectionalDoor", service=SID.SecuritySensor, variable="Armed", value="1"}
+			},
 			types = {"vocal", "email"},
 			subject = "Événement domotique",
 			message = "La porte du garage vient de se fermer"
@@ -227,32 +275,32 @@ WatcherManager.addRule({
 })
 ```
 
-## Surveillance de la température du congélateur
-
-Si la température du congélateur dépasse -16°C, une alerte vocale et un email sont générés.
-
-Tant que la température n'est pas revenue à la normale, une alerte vocale est émise toutes les 30 minutes.
-
-Au retour à la normale, une alerte vocale et un email sont générés.
+### Surveillance de la température du congélateur
 
 ```lua
 WatcherManager.addRule({
 	name = "Freezer_Temperature",
+	-- QUAND la température du congélateur dépasse -16°C
 	triggers = {
 		{type="value+", device="Garage_FreezerTemperature", service=SID.TemperatureSensor, variable="CurrentTemperature", value="-16"}
 	},
 	actions = {
+		-- ALORS alerte vocale et envoi mail
 		{
 			event = "start",
 			types = {"email", "vocal"},
 			subject = "Alerte domotique",
 			message = "Attention, température du congélateur trop haute. La température est de #value# degrés"
-		}, {
+		},
+		-- RAPPEL toutes les 30 minutes, alerte vocale
+		{
 			event = "reminder",
 			timeDelay = 1800, -- 30 minutes
 			type = "vocal",
 			message = "Attention, la température du congélateur est toujours trop haute depuis #durationfull#. Elle est actuellement de #value# degrés"
-		}, {
+		},
+		-- FINALEMENT alerte vocale et envoi mail
+		{
 			event = "end",
 			types = {"email", "vocal"},
 			subject = "Alerte domotique",
@@ -262,50 +310,61 @@ WatcherManager.addRule({
 })
 ```
 
-## Alarme visuelle (règle liée à une autre)
+### Alarme visuelle (règle liée à une autre)
 
 Un ruban LED est allumé en fonction du niveau des règles actives.
 
 ```lua
 WatcherManager.addRule({
 	name = "VisualAlarms",
+	-- QUAND règle "Entry_Door" active (NIVEAU 1)
+	--    OU règle "Garage_Door" active (NIVEAU 1)
+	--    OU règle "Freezer_Temperature" active (NIVEAU 3)
 	triggers = {
 		{type="rule", rule="Entry_Door", status="1", level=1},
 		{type="rule", rule="Garage_Door", status="1", level=1},
 		{type="rule", rule="Freezer_Temperature", status="1", level=3}
 	},
 	actions = {
-		{ -- Alarme visuelle niveau bas
+		-- ALORS (NIVEAU 1) alarme visuelle niveau bas
+		{
 			event = "start",
 			level = 1,
-			callback = function ()
-				luup.call_action(SID.RGBController, "SetColor", {newColor = "#FD6800"}, DeviceHelper.getIdByName("Lounge_CoffeTable_Controller"))
-			end
-		}, { -- Alarme visuelle niveau moyen
+			type="action",
+			device="Lounge_CoffeTable_Controller",
+			service=SID.RGBController, action="SetColor", arguments={newColor="#FD6800"}
+		},
+		-- ALORS (NIVEAU 2) alarme visuelle niveau moyen
+		{
 			event = "start",
 			level = 2,
-			callback = function ()
-				luup.call_action(SID.RGBController, "SetColor", {newColor = "#FD00A2"}, DeviceHelper.getIdByName("Lounge_CoffeTable_Controller"))
-			end
-		}, { -- Alarme visuelle niveau critique
+			type="action",
+			device="Lounge_CoffeTable_Controller",
+			service=SID.RGBController, action="SetColor", arguments={newColor="#FD00A2"}
+		},
+		-- ALORS (NIVEAU 3) alarme visuelle niveau critique
+		{
 			event = "start",
 			level = 3,
-			callback = function ()
-				luup.call_action(SID.RGBController, "SetColor", {newColor = "#FF0000"}, DeviceHelper.getIdByName("Lounge_CoffeTable_Controller"))
-			end
-		}, {
+			type="action",
+			device="Lounge_CoffeTable_Controller",
+			service=SID.RGBController, action="SetColor", arguments={newColor="#FF0000"}
+		},
+		-- FINALEMENT extinction de l'alarme visuelle
+		{
 			event = "end",
-			callback = function ()
-				luup.call_action(SID.RGBController, "SetTarget", {newTargetValue = "0"}, DeviceHelper.getIdByName("Lounge_CoffeTable_Controller"))
-			end
+			type="action",
+			device="Lounge_CoffeTable_Controller",
+			service=SID.RGBController, action="SetTarget", arguments={newTargetValue="0"}
 		}
 	}
 })
 ```
 
-# Tests unitaires
+## Tests unitaires
 
 Vous trouverez les tests unitaires dans le répertoire 'test'.
 
 Ces tests utilisent **Vera-Plugin-Mock**
 https://github.com/vosmont/Vera-Plugin-Mock
+
