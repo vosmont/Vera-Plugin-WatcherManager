@@ -10,10 +10,44 @@ Ce plugin permet de gérer plus simplement ces évènements par des scripts LUA.
 - Le paramétrage (en LUA) à mettre dans le script lancé au démarrage de la Vera.
 - Un système de hook permettant d'étendre les fonctionnalités.
 
-Les écueils :
+> Les écueils :
 - Il n'y a pas d'interface graphique de paramétrage (trop compliqué à maintenir et à développer).
-- Nécessite d'être un utilisateur avancé sur la Vera (certain paramétrage sont près proches du moteur luup)
-- En cas de problème, il faut aller voir les logs pour analyse.
+- Nécessite d'être un utilisateur avancé sur la Vera (certain paramétrages sont près proches du moteur luup)
+- **En cas de problème, il faut aller voir les logs pour analyse**.
+
+Le plugin fonctionne à partir de règles. Une règle a :
+
+- des **triggers** (déclencheurs) qui permettent d'**observer** un ou plusieurs évènements pour pouvoir agir ensuite.
+- des **conditions** *éventuelles* à respecter
+- des **actions** à effectuer pour un stade particulier (début, relance, fin).
+  Une action peut avoir des **conditions particulières** en plus des conditions de la règle.
+
+### Détails techniques
+
+Au démarrage du plugin, celui-ci s'enregistre auprès de la Vera en fonction des triggers définis dans les règles.
+C'est la venue des évènements définis dans les triggers (valeur d'un module qui change, une certaine heure de la journée, ...) qui déclenche le calcul du statut de la règle liée.
+
+Pour l'instant, le plugin n'effectue de traitement que lorsqu'un évènement survient : il n'y a pas d'attente active, ce qui permet d'épargner les ressources de la Vera.
+
+### Cycle de vie d'une règle
+
+Pour qu'une **règle** soit et reste **active**, il faut :
+
+- qu'**au moins un** de ses **triggers** soit déclenché
+- que **toutes les conditions** soient remplies
+
+Si ces critères ne sont plus remplis, la règle devient inactive.
+
+### Les actions
+
+A chaque stade de la vie d'une règle, des actions peuvent être effectuées.
+
+- à l'activation de la règle ("start")
+- tant que la règle est active ("reminder").
+  L'action peut être effectuée plusieurs fois.
+- à la désactivation de la règle ("end")
+
+Une action peut avoir des conditions particulières, qui si elles ne sont pas respectées, peuvent empêcher sa réalisation.
 
 ## Installation
 
@@ -45,23 +79,6 @@ luup.call_delay("startCustomModules", 30, nil)
 
 ### Ajout d'une règle
 
-Le plugin WatcherManager fonctionne à partir de règles. Une règle a :
-
-- des triggers (déclencheurs)
-- des conditions **éventuelles** à respecter
-- des actions à effectuer pour un stade particulier (début, relance, fin).
-  Une action peut avoir des conditions particulières en plus des conditions de la règle.
-
-Au démarrage du plugin, celui-ci s'enregistre auprès de la Vera en fonction des triggers définis dans les règles.
-C'est la venue des évènements définis dans les triggers (valeur d'un module qui change, une certaine heure de la journée, ...) qui déclenche le calcul du statut de la règle liée.
-
-Pour qu'une règle soit et reste active, il faut :
-
-- qu'au moins un de ses triggers soit déclenché
-- que toutes les conditions soient remplies
-
-Si ces critères ne sont plus remplis, la règle devient inactive.
-
 > Pour simplifier le paramétrage, le nom des modules est utilisé à la place de leur identifiant.
 > Ceci permet une plus grande souplesse lors d'un changement d'identifiant d'un module (même fonction mais technologie différente ou changement d'identifiant lors d'un changement de pile)
 
@@ -90,15 +107,11 @@ WatcherManager.addRule({
 
 #### Type "value"
 
-Le type "value" est en rapport avec la **valeur** d'une **variable** pour un **service**, pour un **module**.
+Le type "value" est en rapport avec la **valeur** d'une **variable** pour un **service** et pour un **module**.
+Ce type peut être utilisé en tant que trigger ou condition.
 
-Pour plus de détail, consultez le Wiki de la Vera :
+Pour plus de détail sur la notion de variable de module, consultez le Wiki de la Vera :
 http://wiki.micasaverde.com/index.php/Luup_Lua_extensions#function:_variable_get
-http://wiki.micasaverde.com/index.php/Luup_Lua_extensions#function:_variable_watch
-
-Un **trigger**, permet d'**observer** un ou plusieurs modules et d'agir ensuite en fonction de la valeur de la variable.
-
-Une **condition**, permet de **vérifier** la valeur de la variable d'un ou de plusieurs modules.
 
 Définition pour **un** module à observer/vérifier :
 ```lua
@@ -125,7 +138,7 @@ TYPE | Description
 *value+* | Valeur de la variable supérieure au seuil
 *value<>* | Valeur de la variable différente du seuil
 
-> A noter, pour les types "value" et "value<>", il est possible d'utiliser une expression régulière pour la valeur seuil. Le paramètre est alors *PATTERN* à la place de *VALUE*.
+> A noter, pour les types "value" et "value<>", il est possible d'utiliser une expression régulière pour la valeur seuil. Le paramètre est alors "*pattern*" à la place de "*value*".
 
 ```lua
 {type="<TYPE>", device="<DEVICE_NAME1>", service="<SERVICE_ID>", variable="<VARIABLE_NAME>", pattern="<PATTERN>"}
@@ -137,22 +150,31 @@ TODO
 
 #### Type "timer"
 
+Le type "timer" ne peut être utilisé qu'en tant que trigger.
 TODO
 
 http://wiki.micasaverde.com/index.php/Luup_Lua_extensions#function:_call_timer
 
+```lua
+{type="timer", timerType=<TYPE>, time="<TIME>", days="<DAYS>"}
+```
+avec
+
+Paramètre | Description
+----------|------------
+*TYPE* | Le type de timer (1=Interval timer, 2=Day of week timer, 3=Day of month timer, 4=Absolute timer)
+*TIME* | voir wiki Vera
+*DAYS* | voir wiki Vera
+
 
 #### Type "time"
 
+Le type "time" ne peut être utilisé qu'en tant que condition.
 TODO
 
 ### Actions
 
-Les actions peuvent être effectuées à différents moment de la vie d'une règle (en fonction de son statut) :
 
-- à l'activation de la règle ("start")
-- tant que la règle est active ("reminder"). L'action peut être effectuée plusieurs fois.
-- à la désactivation de la règle ("end")
  
 #### Type "action"
 
@@ -215,7 +237,7 @@ WatcherManager.addRule({
 			event = "reminder",
 			conditions = {
 				{type="time", between={"07:00:00", "20:00:00"}},
-				{type="value<>", device="Lounge_XBMCState", service="urn:upnp-org:serviceId:XBMCState1", variable="PlayerStatus", value="Audio"}
+				{type="value<>", device="Lounge_XBMCState", service="urn:upnp-org:serviceId:XBMCState1", variable="PlayerStatus", pattern="^Audio_.*$"}
 			},
 			timeDelay = 1800, -- 30 minutes
 			type = "vocal",
@@ -367,4 +389,5 @@ Vous trouverez les tests unitaires dans le répertoire 'test'.
 
 Ces tests utilisent **Vera-Plugin-Mock**
 https://github.com/vosmont/Vera-Plugin-Mock
+
 
